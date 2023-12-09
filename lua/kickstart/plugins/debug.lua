@@ -20,6 +20,7 @@ return {
 
     -- Add your own debuggers here
     'leoluz/nvim-dap-go',
+    'mxsdev/nvim-dap-vscode-js',
   },
   config = function()
     local dap = require 'dap'
@@ -30,6 +31,8 @@ return {
       -- reasonable debug configurations
       automatic_setup = true,
 
+      automatic_installation = true,
+
       -- You can provide additional configuration to the handlers,
       -- see mason-nvim-dap README for more information
       handlers = {},
@@ -38,7 +41,7 @@ return {
       -- online, please don't ask me how to install them :)
       ensure_installed = {
         -- Update this to ensure that you have the debuggers for the langs you want
-        'delve',
+        -- 'delve',
       },
     }
 
@@ -51,6 +54,21 @@ return {
     vim.keymap.set('n', '<leader>B', function()
       dap.set_breakpoint(vim.fn.input 'Breakpoint condition: ')
     end, { desc = 'Debug: Set Breakpoint' })
+
+    vim.api.nvim_set_hl(0, "blue", { fg = "#3d59a1" })
+    vim.api.nvim_set_hl(0, "green", { fg = "#9ece6a" })
+    vim.api.nvim_set_hl(0, "yellow", { fg = "#FFFF00" })
+    vim.api.nvim_set_hl(0, "orange", { fg = "#f09000" })
+
+    vim.fn.sign_define('DapBreakpoint',
+      { text = '•', texthl = 'blue', linehl = 'DapBreakpoint', numhl = 'DapBreakpoint' })
+    vim.fn.sign_define('DapBreakpointCondition',
+      { text = '•', texthl = 'blue', linehl = 'DapBreakpoint', numhl = 'DapBreakpoint' })
+    vim.fn.sign_define('DapBreakpointRejected',
+      { text = '•', texthl = 'orange', linehl = 'DapBreakpoint', numhl = 'DapBreakpoint' })
+    vim.fn.sign_define('DapStopped', { text = '•', texthl = 'green', linehl = 'DapBreakpoint', numhl = 'DapBreakpoint' })
+    vim.fn.sign_define('DapLogPoint',
+      { text = '•', texthl = 'yellow', linehl = 'DapBreakpoint', numhl = 'DapBreakpoint' })
 
     -- Dap UI setup
     -- For more information, see |:help nvim-dap-ui|
@@ -83,5 +101,46 @@ return {
 
     -- Install golang specific config
     require('dap-go').setup()
+    require("dap-vscode-js").setup({
+      -- node_path = "node", -- Path of node executable. Defaults to $NODE_PATH, and then "node"
+      debugger_path = vim.fn.stdpath('data') .. "/lazy/vscode-js-debug",                           -- Path to vscode-js-debug installation.
+      -- debugger_cmd = { "js-debug-adapter" }, -- Command to use to launch the debug server. Takes precedence over `node_path` and `debugger_path`.
+      adapters = { 'pwa-node', 'pwa-chrome', 'pwa-msedge', 'node-terminal', 'pwa-extensionHost' }, -- which adapters to register in nvim-dap
+      -- log_file_path = "(stdpath cache)/dap_vscode_js.log" -- Path for file logging
+      -- log_file_level = false -- Logging level for output to file. Set to false to disable file logging.
+      -- log_console_level = vim.log.levels.ERROR -- Logging level for output to console. Set to false to disable console output.
+    })
+
+    local js_based_languages = { "typescript", "javascript", "typescriptreact" }
+
+    for _, language in ipairs(js_based_languages) do
+      require("dap").configurations[language] = {
+        {
+          type = "pwa-node",
+          request = "launch",
+          name = "Launch file",
+          program = "${file}",
+          cwd = "${workspaceFolder}",
+        },
+        {
+          type = "pwa-node",
+          request = "attach",
+          name = "Attach",
+          program = "${file}",
+          cwd = "${workspaceFolder}",
+          sourceMaps = true,
+          protocol = 'inspector',
+          console = 'integratedTerminal',
+        },
+        {
+          type = "pwa-chrome",
+          request = "launch",
+          name = "Start Chrome with \"localhost\"",
+          url = "http://localhost:3000",
+          webRoot = "${workspaceFolder}",
+          userDataDir = "${workspaceFolder}/.vscode/vscode-chrome-debug-userdatadir"
+        }
+      }
+    end
   end,
 }
